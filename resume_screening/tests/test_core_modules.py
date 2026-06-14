@@ -8,6 +8,7 @@ import shutil
 from unittest.mock import patch, MagicMock
 
 from app.core.vector_store import VectorStoreManager
+from app.core.vector_store import OpenAIEmbeddings as VectorStoreEmbeddings
 from app.core.llm_client import LLMClient
 from app.core.document_parser import DocumentParser
 from app.core.cache_manager import CacheManager
@@ -54,25 +55,32 @@ class TestVectorStoreManager:
     def test_add_and_query_documents(self):
         """测试添加和查询文档"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            vsm = VectorStoreManager(persist_directory=temp_dir)
-            
-            # 创建集合
-            collection_name = "test_collection"
-            vsm.create_collection(collection_name, {"test": "metadata"})
-            
-            # 添加文档
-            documents = ["This is document 1", "This is document 2"]
-            metadatas = [{"source": "test1"}, {"source": "test2"}]
-            ids = ["doc1", "doc2"]
-            
-            vsm.add_documents(collection_name, documents, metadatas, ids)
-            
-            # 查询文档
-            results = vsm.query_collection(
-                collection_name, 
-                query_texts=["document 1"], 
-                n_results=1
-            )
+            # Mock OpenAIEmbeddings 以避免真实 API 调用
+            with patch('app.core.vector_store.OpenAIEmbeddings') as MockEmbeddings:
+                mock_embeddings_instance = MagicMock()
+                mock_embeddings_instance.embed_documents.return_value = [[0.1]*1024, [0.2]*1024]
+                MockEmbeddings.return_value = mock_embeddings_instance
+
+                vsm = VectorStoreManager(persist_directory=temp_dir)
+
+                # 创建集合
+                collection_name = "test_collection"
+                vsm.create_collection(collection_name, {"test": "metadata"})
+
+                # 添加文档
+                documents = ["This is document 1", "This is document 2"]
+                metadatas = [{"source": "test1"}, {"source": "test2"}]
+                ids = ["doc1", "doc2"]
+
+                vsm.add_documents(collection_name, documents, metadatas, ids)
+
+                # 查询文档
+                mock_embeddings_instance.embed_documents.return_value = [[0.1]*1024]
+                results = vsm.query_collection(
+                    collection_name,
+                    query_texts=["document 1"],
+                    n_results=1
+                )
             
             assert len(results["ids"][0]) == 1
             # 由于ChromaDB的查询结果可能不完全匹配，我们只验证查询成功执行

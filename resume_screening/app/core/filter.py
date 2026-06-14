@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+import json
 from app.models.metadata import ResumeMetadata, QueryMetadata
 from loguru import logger
 
@@ -7,12 +8,42 @@ class HardFilter:
     """
     硬性条件过滤器，用于根据硬性条件过滤简历
     """
-    
+
     def __init__(self):
         """
         初始化硬性条件过滤器
         """
         logger.info("Initialized HardFilter")
+
+    @staticmethod
+    def _parse_list_field(value: Any) -> list:
+        """
+        将字符串类型的字段解析为列表，支持 JSON 数组和逗号分隔两种格式。
+
+        Args:
+            value: 原始字段值（可能是 None / list / str）
+
+        Returns:
+            list: 解析后的列表
+        """
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return []
+            # 优先尝试 JSON 解析（处理 '["a","b"]' 或 '[{"k":"v"}]' 格式）
+            try:
+                parsed = json.loads(stripped)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+            # 回退：逗号分隔的纯文本
+            return [item.strip() for item in stripped.split(',') if item.strip()]
+        return []
 
     def filter_resumes(self, resumes: List[Dict[str, Any]], query_metadata: QueryMetadata) -> List[Dict[str, Any]]:
         """
@@ -107,15 +138,7 @@ class HardFilter:
                 logger.warning(f"Skipping resume with non-dict metadata: {type(metadata)}")
                 continue
                 
-            work_experience = metadata.get("work_experience", [])
-            # 处理字符串类型的work_experience
-            if isinstance(work_experience, str):
-                logger.info(f"Converting string work_experience to list: {work_experience}")
-                # 尝试用逗号分隔字符串
-                work_experience = [exp.strip() for exp in work_experience.split(',')] if ',' in work_experience else [work_experience]
-            elif not isinstance(work_experience, list):
-                logger.warning(f"Skipping resume with invalid work_experience type: {type(work_experience)}")
-                continue
+            work_experience = self._parse_list_field(metadata.get("work_experience", []))
             
             # 计算总工作经验年限
             total_experience = 0
@@ -172,15 +195,7 @@ class HardFilter:
                 logger.warning(f"Skipping resume with non-dict metadata: {type(metadata)}")
                 continue
                 
-            education_list = metadata.get("education", [])
-            # 处理字符串类型的education_list
-            if isinstance(education_list, str):
-                logger.info(f"Converting string education to list: {education_list}")
-                # 尝试用逗号分隔字符串
-                education_list = [edu.strip() for edu in education_list.split(',')] if ',' in education_list else [education_list]
-            elif not isinstance(education_list, list):
-                logger.warning(f"Skipping resume with invalid education type: {type(education_list)}")
-                continue
+            education_list = self._parse_list_field(metadata.get("education", []))
             
             # 检查是否有满足要求的学历
             meets_requirement = False
@@ -224,15 +239,7 @@ class HardFilter:
                 logger.warning(f"Skipping resume with non-dict metadata: {type(metadata)}")
                 continue
                 
-            skills = metadata.get("skills", [])
-            # 处理字符串类型的skills
-            if isinstance(skills, str):
-                logger.info(f"Converting string skills to list: {skills}")
-                # 尝试用逗号分隔字符串
-                skills = [s.strip() for s in skills.split(',')] if ',' in skills else [skills]
-            elif not isinstance(skills, list):
-                logger.warning(f"Skipping resume with invalid skills type: {type(skills)}")
-                continue
+            skills = self._parse_list_field(metadata.get("skills", []))
             
             # 检查是否包含所有必需技能
             meets_requirement = True
@@ -271,15 +278,7 @@ class HardFilter:
                 logger.warning(f"Skipping resume with non-dict metadata: {type(metadata)}")
                 continue
                 
-            preferred_locations = metadata.get("preferred_locations", [])
-            # 处理字符串类型的preferred_locations
-            if isinstance(preferred_locations, str):
-                logger.info(f"Converting string preferred_locations to list: {preferred_locations}")
-                # 尝试用逗号分隔字符串
-                preferred_locations = [loc.strip() for loc in preferred_locations.split(',')] if ',' in preferred_locations else [preferred_locations]
-            elif not isinstance(preferred_locations, list):
-                logger.warning(f"Skipping resume with invalid preferred_locations type: {type(preferred_locations)}")
-                continue
+            preferred_locations = self._parse_list_field(metadata.get("preferred_locations", []))
             
             # 检查是否有匹配的地点
             meets_requirement = False
@@ -318,15 +317,7 @@ class HardFilter:
                 logger.warning(f"Skipping resume with non-dict metadata: {type(metadata)}")
                 continue
                 
-            languages = metadata.get("languages", [])
-            # 处理字符串类型的languages
-            if isinstance(languages, str):
-                logger.info(f"Converting string languages to list: {languages}")
-                # 尝试用逗号分隔字符串
-                languages = [l.strip() for l in languages.split(',')] if ',' in languages else [languages]
-            elif not isinstance(languages, list):
-                logger.warning(f"Skipping resume with invalid languages type: {type(languages)}")
-                continue
+            languages = self._parse_list_field(metadata.get("languages", []))
             
             # 检查是否满足所有语言要求
             meets_requirement = True
@@ -365,15 +356,7 @@ class HardFilter:
                 logger.warning(f"Skipping resume with non-dict metadata: {type(metadata)}")
                 continue
                 
-            certifications = metadata.get("certifications", [])
-            # 处理字符串类型的certifications
-            if isinstance(certifications, str):
-                logger.info(f"Converting string certifications to list: {certifications}")
-                # 尝试用逗号分隔字符串
-                certifications = [c.strip() for c in certifications.split(',')] if ',' in certifications else [certifications]
-            elif not isinstance(certifications, list):
-                logger.warning(f"Skipping resume with invalid certifications type: {type(certifications)}")
-                continue
+            certifications = self._parse_list_field(metadata.get("certifications", []))
             
             # 检查是否满足所有证书要求
             meets_requirement = True

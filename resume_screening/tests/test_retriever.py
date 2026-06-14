@@ -42,10 +42,12 @@ class TestRetriever:
         
         # 验证向量存储管理器的方法被调用
         mock_vector_store_manager.get_collection.assert_called_once_with("resumes")
+        # metadata 经过 _process_metadata 处理，列表字段被序列化为 JSON 字符串
+        expected_metadata = {"name": "张三", "skills": '["Python", "Java"]'}
         mock_vector_store_manager.add_documents.assert_called_once_with(
             collection_name="resumes",
             documents=[resume_text],
-            metadatas=[metadata],
+            metadatas=[expected_metadata],
             ids=[resume_id]
         )
 
